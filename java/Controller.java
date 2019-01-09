@@ -1,9 +1,10 @@
 import java.util.ArrayList;
 public class Controller{
    public static void main(String[] args) throws InterruptedException{
-      Model.init(args[0]);
+      //input window w, window h, elevationFile, landCoverFile
+      Model.init(args[2], args[3]);
       //View v = new View(Model.ncols,Model.nrows);
-      View v = new View(2000,1500);
+      View v = new View(Integer.parseInt(args[0]),Integer.parseInt(args[1]));
       while(true){ //going to change this to a key listener
          update();
          Thread.sleep(5);

@@ -8,35 +8,51 @@ public class Model{
    public static int ncols;
    public static ArrayList<ArrayList<Cell>> cells;
    public static ArrayList<Cell> activeFires;
-   public static void init(String filename){
+   public static void init(String dem, String cover){
       activeFires = new ArrayList<Cell>();
       cells = new ArrayList<ArrayList<Cell>>();
-      fillCells(filename);
+      fillCells(dem, cover);
       nrows = cells.size();
       ncols = nrows > 0 ? cells.get(0).size() : 0;
    }
-   private static void fillCells(String filename){
+   private static void fillCells(String dem, String cover){
       try {
-         File input = new File(filename);
-         Scanner lineScan = new Scanner(input);
+         File inputDem = new File(dem);
+         Scanner demlineScan = new Scanner(inputDem);
+         File inputCover = new File(cover);
+         Scanner coverlineScan = new Scanner(inputCover);
          int y = 0;
          Cell.max = 0;
-         while(lineScan.hasNextLine()){
+         while(demlineScan.hasNextLine()){
             cells.add(new ArrayList<Cell>());
-            String line = lineScan.nextLine();
-            line = line.replace('[',' ');
-            line = line.replace(']',' ');
-            String[] strnums = line.split(",");
-            for(int x = 0; x < strnums.length; x++){
-               String thisnum = strnums[x];
-               float elevation = Float.parseFloat(thisnum);
+            String demline = demlineScan.nextLine();
+            demline = demline.replace('[',' ');
+            demline = demline.replace(']',' ');
+            String[] strdems = demline.split(",");
+            
+
+            String coverline = coverlineScan.nextLine();
+            coverline = coverline.replace('[',' ');
+            coverline = coverline.replace(']',' ');
+            String[] strcovers = coverline.split(",");
+
+
+            for(int x = 0; x < strdems.length; x++){
+               String thiselevation = strdems[x];
+               String thiscover = strcovers[x];
+               float elevation = Float.parseFloat(thiselevation);
+               int coverType = Integer.parseInt(thiscover.trim());
                if(elevation > Cell.max){
                   Cell.max = elevation;
                }
-               cells.get(y).add(new Cell(x,y,elevation)); 
+
+               Cell c = new Cell(x,y,elevation, coverType);
+               cells.get(y).add(c); 
             }
             y++;
          }
+         coverlineScan.close();
+         demlineScan.close();
       } catch(FileNotFoundException e){
          System.out.println("file not found exception");
          e.printStackTrace();
@@ -47,12 +63,13 @@ public class Model{
       private int[] loc;
       private String type;
       private float elevation;
-      private String fuelType;
+      private int fuelType;
       private String weather;
       private String moisture;
       private int age;
       public static float max;
-      public Cell(int x, int y, float elevation){
+      public Cell(int x, int y, float elevation, int cover){
+         this.fuelType = cover;
          this.loc = new int[] {x,y};
          this.elevation = elevation;
          this.type = "normal";
@@ -118,11 +135,12 @@ public class Model{
          return elevation;
       }
       private boolean onRidge() {
-         int cx = getX() - 1; 
-         int cy = getY() - 1;
+         int offset = 10;
+         int cx = getX() - offset; 
+         int cy = getY() - offset;
          float max = this.elevation;
-         for(;cx<=getX()+1;cx++){
-            for(;cy<=getY()+1;cy++){
+         for(;cx<=getX()+offset;cx++){
+            for(;cy<=getY()+offset;cy++){
                try{
                   max = cells.get(cy).get(cx).getElevation() > max ? cells.get(cy).get(cx).getElevation() : max;
                } catch (ArrayIndexOutOfBoundsException e){
@@ -133,11 +151,12 @@ public class Model{
          return max == this.elevation;
       }
       private float getProb(){
-         float prob = 10;
-         //int near = findNear();
-         //prob+=near*12.5;
-         prob-=onRidge() ? 8 : 0;
-         return prob;
+         float prob = 25;
+         int near = findNear();
+         prob+=near*12.5;
+         prob-=onRidge() ? 15 : 0;
+         //return prob;
+         return 100;
       }
       public Cell update(){
          if(type.equalsIgnoreCase("fire")){
@@ -148,7 +167,12 @@ public class Model{
             return null;
          } else if(type.equalsIgnoreCase("break") || type.equalsIgnoreCase("burnt")){
             return null;
-         } 
+         } else if(fuelType == 3
+               || fuelType == 21
+               || fuelType == 2
+               || fuelType == 6){
+            return null;
+         }
          float prob = getProb();
          if(rand.nextInt(100) + 1 < prob){
             Cell c = new Cell(this); 

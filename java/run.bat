@@ -1,0 +1,1 @@
+javac *.java && java Controller 2000 1500 ../data/bigdem.json ../data/biglandcover.json

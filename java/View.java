@@ -22,7 +22,7 @@ public class View extends JFrame {
       //setResizable(false);
       setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       setLocationRelativeTo(null);
-      drawTime = new Timer(0, canvas);
+      drawTime = new Timer(100, canvas);
       drawTime.start();
       setVisible(true);
       setupKeyBindings();
