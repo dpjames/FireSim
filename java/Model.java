@@ -8,14 +8,14 @@ public class Model{
    public static int ncols;
    public static ArrayList<ArrayList<Cell>> cells;
    public static ArrayList<Cell> activeFires;
-   public static void init(String dem, String cover){
+   public static void init(String dem, String cover, String wind){
       activeFires = new ArrayList<Cell>();
       cells = new ArrayList<ArrayList<Cell>>();
-      fillCells(dem, cover);
+      fillCells(dem, cover, wind);
       nrows = cells.size();
       ncols = nrows > 0 ? cells.get(0).size() : 0;
    }
-   private static void fillCells(String dem, String cover){
+   private static void fillCells(String dem, String cover, String wind){
       try {
          File inputDem = new File(dem);
          Scanner demlineScan = new Scanner(inputDem);
@@ -23,6 +23,7 @@ public class Model{
          Scanner coverlineScan = new Scanner(inputCover);
          int y = 0;
          Cell.max = 0;
+         Cell.wind = wind;
          while(demlineScan.hasNextLine()){
             cells.add(new ArrayList<Cell>());
             String demline = demlineScan.nextLine();
@@ -66,6 +67,7 @@ public class Model{
       private int fuelType;
       private String weather;
       private String moisture;
+      public static String wind;
       private int age;
       public static float max;
       public Cell(int x, int y, float elevation, int cover){
@@ -114,15 +116,26 @@ public class Model{
       public void incrementAge(){
          age++;
       }
+      private boolean inWindDirection(int cx, int cy){
+         if(cx > getX() && cy < getY()){
+            return true;
+         }
+         return false;
+      }
       private int findNear(){
          int total = 0;
          int cx = getX() - 1; 
-         int cy = getY() - 1;
          for(;cx<=getX()+1;cx++){
+            int cy = getY() - 1;
             for(;cy<=getY()+1;cy++){
                try{
                   if(cells.get(cy).get(cx).getType().equalsIgnoreCase("fire")){
                      total++;
+                     if(inWindDirection(cx,cy)){
+                        total+=2;
+                     } else {
+                        total-=2;
+                     }
                   }
                } catch (ArrayIndexOutOfBoundsException e){
                   continue;
@@ -153,10 +166,10 @@ public class Model{
       private float getProb(){
          float prob = 25;
          int near = findNear();
-         prob+=near*12.5;
+         prob+=near*10;
          prob-=onRidge() ? 15 : 0;
-         //return prob;
-         return 100;
+         return prob;
+         //return 100;
       }
       public Cell update(){
          if(type.equalsIgnoreCase("fire")){

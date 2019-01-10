@@ -2,7 +2,7 @@ import java.util.ArrayList;
 public class Controller{
    public static void main(String[] args) throws InterruptedException{
       //input window w, window h, elevationFile, landCoverFile
-      Model.init(args[2], args[3]);
+      Model.init(args[2], args[3], args[4]);
       //View v = new View(Model.ncols,Model.nrows);
       View v = new View(Integer.parseInt(args[0]),Integer.parseInt(args[1]));
       while(true){ //going to change this to a key listener
