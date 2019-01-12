@@ -1,16 +1,24 @@
 import java.util.ArrayList;
 public class Controller{
+   private static boolean reset = false;
    public static void main(String[] args) throws InterruptedException{
       //input window w, window h, elevationFile, landCoverFile
       Model.init(args[2], args[3], args[4]);
       //View v = new View(Model.ncols,Model.nrows);
       View v = new View(Integer.parseInt(args[0]),Integer.parseInt(args[1]));
       while(true){ //going to change this to a key listener
+         if(reset){
+            reset = false; 
+            Model.reset();
+         }
          update();
          Thread.sleep(5);
       }
    }
-   public static void update(){
+   public static void reset(){
+      reset = true;  
+   }
+   public static void update() throws NullPointerException{
       ArrayList<Model.Cell> newCells = new ArrayList<Model.Cell>();
       for(int i = 0; i < Model.activeFires.size(); i++){
          Model.Cell c = Model.activeFires.get(i);

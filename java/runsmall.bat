@@ -1,2 +1,2 @@
-javac *.java && java Controller 2000 1500 ../../data/dem.json ../../data/landcover.json SW
+javac *.java && java Controller 1000 500 ../../data/dem.json ../../data/landcover.json SW
 

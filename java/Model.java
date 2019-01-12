@@ -1,6 +1,7 @@
 import java.util.*;
 import java.awt.*;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 public class Model{
    private static final int MAX_FIRE_AGE = 10;
    private static Random rand = new Random();
@@ -14,6 +15,18 @@ public class Model{
       fillCells(dem, cover, wind);
       nrows = cells.size();
       ncols = nrows > 0 ? cells.get(0).size() : 0;
+   }
+   public static void reset(){
+      for(int y = 0; y < cells.size(); y++){
+         for(int x = 0; x < cells.get(0).size(); x++){
+            try{
+               cells.get(y).get(x).reset();
+            } catch(IndexOutOfBoundsException e){
+               //System.out.println("oob");
+            }
+         }
+      }
+      activeFires.clear();
    }
    private static void fillCells(String dem, String cover, String wind){
       try {
@@ -52,6 +65,9 @@ public class Model{
             }
             y++;
          }
+         if(demlineScan.ioException() != null){
+            demlineScan.ioException().printStackTrace();
+         }
          coverlineScan.close();
          demlineScan.close();
       } catch(FileNotFoundException e){
@@ -70,6 +86,10 @@ public class Model{
       public static String wind;
       private int age;
       public static float max;
+      private void reset(){
+         type = "normal";
+         age = 0;
+      }
       public Cell(int x, int y, float elevation, int cover){
          this.fuelType = cover;
          this.loc = new int[] {x,y};
@@ -94,7 +114,7 @@ public class Model{
       public int getY(){
          return loc[1];
       }
-      public void draw(Graphics g, int xoffset, int yoffset){
+      public void draw(Graphics g, int xoffset, int yoffset, int zoom){
          if(this.type.equalsIgnoreCase("fire")){
             g.setColor(Color.RED);
          } else if(type.equalsIgnoreCase("burnt")){
@@ -105,7 +125,7 @@ public class Model{
             float cv = elevation/max;
             g.setColor(new Color(cv, cv, cv));
          }
-         g.fillRect(loc[0] - xoffset, loc[1] - yoffset,1,1);
+         g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1,1);
       }
       public void setType(String t){
          this.type = t;

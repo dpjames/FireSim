@@ -4,16 +4,13 @@ import java.awt.event.*;
 public class View extends JFrame {
    private Timer drawTime;
    private DrawCanvas canvas = new DrawCanvas();
-   private int width;
-   private int height;
    private int viewY;
    private int viewX;
+   private int zoomFactor = 1;
    public View(int w,int h){
       super();
       viewY = 0;
       viewX = 0;
-      height = h;
-      width = w;
       setLayout(new BorderLayout());
       setSize(w,h);
       canvas.addMouseListener(canvas);
@@ -36,34 +33,61 @@ public class View extends JFrame {
       canvas.getActionMap().put(UP,up);
       canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN,0), DOWN);
       canvas.getActionMap().put(DOWN,down);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS,KeyEvent.SHIFT_DOWN_MASK), ZOOMIN);
+      canvas.getActionMap().put(ZOOMIN,zoomin);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS,0), ZOOMOUT);
+      canvas.getActionMap().put(ZOOMOUT,zoomout);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R,0), RESET);
+      canvas.getActionMap().put(RESET,reset);
    }
    private static final String LEFT = "LEFT";
    private static final String RIGHT = "RIGHT";
    private static final String UP = "UP";
    private static final String DOWN = "DOWN";
+   private static final String ZOOMIN = "ZOOMIN";
+   private static final String ZOOMOUT = "ZOOMOUT";
+   private static final String RESET = "RESET";
 
+   private Action reset = new AbstractAction(RESET){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         Controller.reset();
+      }
+   };
+   private Action zoomin = new AbstractAction(ZOOMIN){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         zoomFactor--;
+      }
+   };
+   private Action zoomout = new AbstractAction(ZOOMOUT){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         zoomFactor++;
+      }
+   };
    private Action down = new AbstractAction(DOWN){
       @Override
       public void actionPerformed(ActionEvent e){
-         viewY+=height/2;
-         if(viewY + height > Model.nrows){
-            viewY = Model.nrows - height;
+         viewY+=canvas.getHeight()/2 * zoomFactor;
+         if(viewY + canvas.getHeight() > Model.nrows){
+            viewY = Model.nrows - canvas.getHeight();
          }
       }
    };
    private Action right = new AbstractAction(RIGHT){
       @Override
       public void actionPerformed(ActionEvent e){
-         viewX+=width/2;
-         if(viewX + width > Model.ncols){
-            viewX = Model.ncols - width;
+         viewX+=canvas.getWidth()/2 * zoomFactor;
+         if(viewX + canvas.getWidth() > Model.ncols){
+            viewX = Model.ncols - canvas.getWidth();
          }
       }
    };
    private Action left = new AbstractAction(LEFT){
       @Override
       public void actionPerformed(ActionEvent e){
-         viewX-=width/2;
+         viewX-=canvas.getWidth()/2 * zoomFactor;
          if(viewX < 0){
             viewX = 0;
          }
@@ -72,7 +96,7 @@ public class View extends JFrame {
    private Action up = new AbstractAction(UP){
       @Override
       public void actionPerformed(ActionEvent e){
-         viewY-= height/2;
+         viewY-= canvas.getHeight()/2 * zoomFactor;
          if(viewY < 0){
             viewY = 0;
          }
@@ -82,11 +106,12 @@ public class View extends JFrame {
    private class DrawCanvas extends JPanel implements MouseListener, ActionListener{
       @Override
       public void paintComponent(Graphics g){
+         int zoom = zoomFactor;
          super.paintComponent(g);
-         for(int y = viewY; y < height + viewY; y++){
-            for(int x = viewX; x < width+viewX; x++){
+         for(int y = viewY; y   < (this.getHeight() * zoom) + viewY; y+=zoom){
+            for(int x = viewX; x < (this.getWidth() * zoom) + viewX; x+=zoom){
                try{
-                  Model.cells.get(y).get(x).draw(g, viewX, viewY);
+                  Model.cells.get(y).get(x).draw(g, viewX, viewY, zoom);
                } catch (Exception e){
                   continue;
                }
@@ -98,11 +123,15 @@ public class View extends JFrame {
          repaint();
       }
       public void mouseClicked(MouseEvent e){
-         int x = e.getX() + viewX;
-         int y = e.getY() + viewY;
-         Model.cells.get(y).get(x).setType("fire");
-         Model.cells.get(y).get(x).setAge(0);
-         Model.activeFires.add(Model.cells.get(y).get(x));
+         try{
+            int x = (e.getX() * zoomFactor) + viewX;
+            int y = (e.getY() * zoomFactor) + viewY;
+            Model.cells.get(y).get(x).setType("fire");
+            Model.cells.get(y).get(x).setAge(0);
+            Model.activeFires.add(Model.cells.get(y).get(x));
+         } catch (IndexOutOfBoundsException obe){
+            //System.out.println("oob");
+         }
       }
       
       public void mouseEntered(MouseEvent e){

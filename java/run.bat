@@ -1,1 +1,1 @@
-javac *.java && java Controller 2000 1500 ../../data/bigDEM.json ../../data/bigLandcover.json SW
+javac *.java && java Controller 1000 500 ../../data/bigDEM.json ../../data/bigLandcover.json SW
