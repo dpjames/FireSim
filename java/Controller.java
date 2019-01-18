@@ -1,22 +1,36 @@
 import java.util.ArrayList;
 public class Controller{
    private static boolean reset = false;
+   private static boolean running = true;
+   private static final int INIT_WIDTH = 500;
+   private static final int INIT_HEIGHT = 500;
+   private static final String DEM_FILE_NAME = "../data/bigDEM.json";
+   private static final String LAND_COVER_FILE_NAME = "../data/bigLandcover.json";
+   private static final String WIND_DIRECTION = "SE";
    public static void main(String[] args) throws InterruptedException{
-      //input window w, window h, elevationFile, landCoverFile
-      Model.init(args[2], args[3], args[4]);
-      //View v = new View(Model.ncols,Model.nrows);
-      View v = new View(Integer.parseInt(args[0]),Integer.parseInt(args[1]));
-      while(true){ //going to change this to a key listener
-         if(reset){
-            reset = false; 
+      Model.readTiff("../data/landcoverFull.tif");
+      if(true){
+         System.exit(0);
+      }
+      Model.init(DEM_FILE_NAME, LAND_COVER_FILE_NAME, WIND_DIRECTION);
+      View v = new View(INIT_WIDTH, INIT_HEIGHT);
+
+      while(true){ //going to change this to a key listener TODO
+         if (reset) {
+            reset = false;
             Model.reset();
          }
-         update();
-         Thread.sleep(5);
+         if(running){
+            update();
+         }
+         Thread.sleep(running ? 5 : 500);
       }
    }
    public static void reset(){
       reset = true;  
+   }
+   public static void toggleRun(){
+      running = !running;
    }
    public static void update() throws NullPointerException{
       ArrayList<Model.Cell> newCells = new ArrayList<Model.Cell>();

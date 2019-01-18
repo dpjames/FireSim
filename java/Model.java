@@ -1,9 +1,25 @@
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.Raster;
+import java.lang.reflect.Array;
+import java.rmi.server.ExportException;
 import java.util.*;
 import java.awt.*;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.function.Consumer;
+
+import org.apache.commons.imaging.FormatCompliance;
+import org.apache.commons.imaging.Imaging;
+import org.apache.commons.imaging.common.bytesource.ByteSource;
+import org.apache.commons.imaging.common.bytesource.ByteSourceFile;
+import org.apache.commons.imaging.formats.tiff.*;
+
+import javax.imageio.ImageIO;
+
 public class Model{
-   private static final int MAX_FIRE_AGE = 10;
+   private static final int MAX_FIRE_AGE = 4;
    private static Random rand = new Random();
    public static int nrows;
    public static int ncols;
@@ -27,6 +43,37 @@ public class Model{
          }
       }
       activeFires.clear();
+   }
+   public static void readTiff(String fname){
+      try {
+         BufferedImage im = Imaging.getBufferedImage(new File(fname));
+         ColorModel cm = im.getColorModel();
+         Raster r = im.getData();
+         DataBuffer db = r.getDataBuffer();
+         int firstV = ((int[]) r.getDataElements(0,0, null))[0];
+         int min = cm.getRed(firstV);
+         int max = cm.getRed(firstV);
+         System.out.println(cm.getRed(min) + ","+cm.getGreen(min)+","+cm.getBlue(min)+","+cm.getAlpha(min));
+         ArrayList<ArrayList<Color>> cl = new ArrayList<>();
+         for(int x = 0; x < r.getWidth(); x++){
+            cl.add(new ArrayList<>());
+            for(int y = 0; y < r.getHeight(); y++) {
+               int v = ((int[]) r.getDataElements(x, y, null))[0];
+               v = cm.getRed(v);
+               if(v > max){
+                  max = v;
+               }
+               if(v < min){
+                  min = v;
+               }
+            }
+         }
+      }catch(Exception e){
+         System.out.println("we found an error");
+         e.printStackTrace();
+         System.exit(-1);
+      }
+
    }
    private static void fillCells(String dem, String cover, String wind){
       try {
@@ -114,7 +161,7 @@ public class Model{
       public int getY(){
          return loc[1];
       }
-      public void draw(Graphics g, int xoffset, int yoffset, int zoom){
+      public void draw(Graphics g, int xoffset, int yoffset, int zoom, int skip){
          if(this.type.equalsIgnoreCase("fire")){
             g.setColor(Color.RED);
          } else if(type.equalsIgnoreCase("burnt")){
@@ -125,7 +172,7 @@ public class Model{
             float cv = elevation/max;
             g.setColor(new Color(cv, cv, cv));
          }
-         g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1,1);
+         g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1+skip,1+skip);
       }
       public void setType(String t){
          this.type = t;
@@ -137,10 +184,11 @@ public class Model{
          age++;
       }
       private boolean inWindDirection(int cx, int cy){
-         if(cx > getX() && cy < getY()){
-            return true;
-         }
-         return false;
+         return
+                 (wind.contains("N")  && cy > getY()) ||
+                 (wind.contains("E")  && cx < getX()) ||
+                 (wind.contains("S")  && cy < getY()) ||
+                 (wind.contains("W")  && cx > getX());
       }
       private int findNear(){
          int total = 0;
@@ -152,9 +200,9 @@ public class Model{
                   if(cells.get(cy).get(cx).getType().equalsIgnoreCase("fire")){
                      total++;
                      if(inWindDirection(cx,cy)){
-                        total+=2;
+                        total+=5;
                      } else {
-                        total-=2;
+                        total-=20;
                      }
                   }
                } catch (ArrayIndexOutOfBoundsException e){
@@ -186,10 +234,9 @@ public class Model{
       private float getProb(){
          float prob = 25;
          int near = findNear();
-         prob+=near*10;
+         prob+=near*2;
          prob-=onRidge() ? 15 : 0;
          return prob;
-         //return 100;
       }
       public Cell update(){
          if(type.equalsIgnoreCase("fire")){

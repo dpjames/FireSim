@@ -7,6 +7,7 @@ public class View extends JFrame {
    private int viewY;
    private int viewX;
    private int zoomFactor = 1;
+   private int skipValue = 5;
    public View(int w,int h){
       super();
       viewY = 0;
@@ -19,7 +20,7 @@ public class View extends JFrame {
       //setResizable(false);
       setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       setLocationRelativeTo(null);
-      drawTime = new Timer(100, canvas);
+      drawTime = new Timer(0, canvas);
       drawTime.start();
       setVisible(true);
       setupKeyBindings();
@@ -37,9 +38,16 @@ public class View extends JFrame {
       canvas.getActionMap().put(ZOOMIN,zoomin);
       canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_MINUS,0), ZOOMOUT);
       canvas.getActionMap().put(ZOOMOUT,zoomout);
-      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R,0), RESET);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R,KeyEvent.CTRL_DOWN_MASK), RESET);
       canvas.getActionMap().put(RESET,reset);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_R,0), TOGGLE_RUN);
+      canvas.getActionMap().put(TOGGLE_RUN,toggle_run);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_M,0), SKIP_MORE);
+      canvas.getActionMap().put(SKIP_MORE,skip_more);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_N,0), SKIP_LESS);
+      canvas.getActionMap().put(SKIP_LESS,skip_less);
    }
+   private static final String TOGGLE_RUN = "TOGGLE_RUN";
    private static final String LEFT = "LEFT";
    private static final String RIGHT = "RIGHT";
    private static final String UP = "UP";
@@ -47,17 +55,36 @@ public class View extends JFrame {
    private static final String ZOOMIN = "ZOOMIN";
    private static final String ZOOMOUT = "ZOOMOUT";
    private static final String RESET = "RESET";
-
+   private static final String SKIP_MORE = "SKIP_MORE";
+   private static final String SKIP_LESS = "SKIP_LESS";
+   private Action skip_more = new AbstractAction(SKIP_MORE){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         skipValue++;
+      }
+   };
+   private Action skip_less = new AbstractAction(SKIP_LESS){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         skipValue = skipValue - 1 <= 0 ? 1 : skipValue - 1;
+      }
+   };
    private Action reset = new AbstractAction(RESET){
       @Override
       public void actionPerformed(ActionEvent e){
          Controller.reset();
       }
    };
+   private Action toggle_run = new AbstractAction(TOGGLE_RUN){
+      @Override
+      public void actionPerformed(ActionEvent e){
+         Controller.toggleRun();
+      }
+   };
    private Action zoomin = new AbstractAction(ZOOMIN){
       @Override
       public void actionPerformed(ActionEvent e){
-         zoomFactor--;
+         zoomFactor = zoomFactor - 1 < 1 ? 1 : zoomFactor - 1;
       }
    };
    private Action zoomout = new AbstractAction(ZOOMOUT){
@@ -106,13 +133,13 @@ public class View extends JFrame {
    private class DrawCanvas extends JPanel implements MouseListener, ActionListener{
       @Override
       public void paintComponent(Graphics g){
-         int zoom = zoomFactor;
          super.paintComponent(g);
-         for(int y = viewY; y   < (this.getHeight() * zoom) + viewY; y+=zoom){
-            for(int x = viewX; x < (this.getWidth() * zoom) + viewX; x+=zoom){
-               try{
-                  Model.cells.get(y).get(x).draw(g, viewX, viewY, zoom);
-               } catch (Exception e){
+         int zoom = zoomFactor;
+         for (int y = viewY; y < (this.getHeight() * (zoom)) + viewY; y += (zoom + skipValue)) {
+            for (int x = viewX; x < (this.getWidth() * (zoom)) + viewX; x += (zoom + skipValue)) {
+               try {
+                  Model.cells.get(y).get(x).draw(g, viewX, viewY, zoom, skipValue);
+               } catch (Exception e) {
                   continue;
                }
             }
