@@ -1,26 +1,19 @@
 import java.awt.image.*;
-import java.lang.reflect.Array;
-import java.rmi.server.ExportException;
 import java.util.*;
 import java.awt.*;
 import java.io.*;
-import java.util.List;
-import java.util.function.Consumer;
-
-import org.apache.commons.imaging.FormatCompliance;
 import org.apache.commons.imaging.Imaging;
-import org.apache.commons.imaging.common.bytesource.ByteSource;
-import org.apache.commons.imaging.common.bytesource.ByteSourceFile;
-import org.apache.commons.imaging.formats.tiff.*;
-import org.apache.commons.imaging.formats.tiff.taginfos.TagInfo;
-import org.apache.commons.imaging.formats.tiff.taginfos.TagInfoAscii;
-
-import javax.imageio.ImageIO;
 
 public class Model{
-   private static final int TARGET_WIDTH = 4000;
-   private static final int TARGET_HEIGHT = 8000;
-   private static final int MAX_FIRE_AGE = 5;
+   private static final int TARGET_WIDTH = 5000;
+   private static final int TARGET_HEIGHT = 5000;
+   private static final int MAX_FIRE_AGE = 20;
+   private static final int SEARCH_BOX_OFFSET = 5;
+   private static final double WIND_MOD = .2;
+   private static final double BASE_PROB = 2.7;
+   private static Color FIRE_COLOR = Color.RED;
+   private static Color BURNT_COLOR = new Color(139,69,19);
+   private static Color BREAK_COLOR = Color.YELLOW;
    private static Random rand = new Random();
    public static int nrows;
    public static int ncols;
@@ -91,6 +84,7 @@ public class Model{
                pixels[i][j] = (img.getRGB(i, j));
             }
          }
+
          return pixels;
       }catch(Exception e){
          System.out.println("we found an error");
@@ -140,11 +134,11 @@ public class Model{
       }
       public void draw(Graphics g, int xoffset, int yoffset, int zoom, int skip){
          if(this.type.equalsIgnoreCase("fire")){
-            g.setColor(Color.RED);
+            g.setColor(FIRE_COLOR);
          } else if(type.equalsIgnoreCase("burnt")){
-            g.setColor(Color.GREEN);
+            g.setColor(BURNT_COLOR);
          } else if(type.equalsIgnoreCase("break")){
-            g.setColor(Color.YELLOW);
+            g.setColor(BREAK_COLOR);
          } else {
             int cv = (int)elevation;
             g.setColor(new Color(cm.getRed(cv), cm.getBlue(cv), cm.getGreen(cv)));
@@ -169,18 +163,13 @@ public class Model{
       }
       private int findNear(){
          int total = 0;
-         int cx = getX() - 1; 
+         int cx = getX() - 1;
          for(;cx<=getX()+1;cx++){
             int cy = getY() - 1;
             for(;cy<=getY()+1;cy++){
                try{
                   if(cells.get(cy).get(cx).getType().equalsIgnoreCase("fire")){
                      total++;
-                     if(inWindDirection(cx,cy)){
-                        total+=5;
-                     } else {
-                        total-=20;
-                     }
                   }
                } catch (ArrayIndexOutOfBoundsException e){
                   continue;
@@ -194,8 +183,8 @@ public class Model{
       }
       private boolean onRidge() {
          int offset = 10;
-         int cx = getX() - offset; 
-         int cy = getY() - offset;
+         int cx = getX() - offset/2;
+         int cy = getY() - offset/2;
          float max = this.elevation;
          for(;cx<=getX()+offset;cx++){
             for(;cy<=getY()+offset;cy++){
@@ -208,12 +197,44 @@ public class Model{
          }
          return max == this.elevation;
       }
+      //private float getProb(){
+      //   int tprob = 0;
+      //   int cx = getX() - offset;
+      //   int cy = getY() - offset;
+      //   for(;cx<=getX()+1;cx++){
+      //      int cy = getY() - 1;
+      //      for(;cy<=getY()+1;cy++){
+      //         tprob+=getCellProb(cells.get(cy).get(cx));
+      //      }
+      //   }
+      //   int near = findNear();
+      //   //float prob = 10;
+      //   //prob+=near*2;
+      //   //prob-=onRidge() ? 50 : 0;
+      //   return prob;
+      //}
+      private double getCellContribution(int x, int y){
+         Cell c = cells.get(y).get(x);
+         int dx = Math.abs(x - getX());
+         int dy = Math.abs(y - getY());
+         double distance = Math.sqrt(dx * dx + dy * dy);
+         if(!c.type.equalsIgnoreCase("fire")){ //if its not on fire, then it cant catch you on fire.
+            return 0;
+         }
+         double prob = BASE_PROB;
+         prob += inWindDirection(x,y) ? WIND_MOD : -1 * WIND_MOD;
+         return prob/distance;
+      }
       private float getProb(){
-         float prob = 10;
-         int near = findNear();
-         prob+=near*2;
-         prob-=onRidge() ? 50 : 0;
-         return prob;
+         int total = 0;
+         int y = getY();
+         int x = getX();
+         for(int cx = x - SEARCH_BOX_OFFSET;cx < x + SEARCH_BOX_OFFSET; cx++){
+            for(int cy = y - SEARCH_BOX_OFFSET; cy < y + SEARCH_BOX_OFFSET; cy++){
+               total+=getCellContribution(cx,cy);
+            }
+         }
+         return total;
       }
       public Cell update(){
          if(type.equalsIgnoreCase("fire")){
@@ -224,10 +245,7 @@ public class Model{
             return null;
          } else if(type.equalsIgnoreCase("break") || type.equalsIgnoreCase("burnt")){
             return null;
-         } else if(fuelType == 3
-               || fuelType == 21
-               || fuelType == 2
-               || fuelType == 6){
+         } else if(fuelType == -1){
             return null;
          }
          float prob = getProb();
