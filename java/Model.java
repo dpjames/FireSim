@@ -1,7 +1,4 @@
-import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.Raster;
+import java.awt.image.*;
 import java.lang.reflect.Array;
 import java.rmi.server.ExportException;
 import java.util.*;
@@ -15,11 +12,15 @@ import org.apache.commons.imaging.Imaging;
 import org.apache.commons.imaging.common.bytesource.ByteSource;
 import org.apache.commons.imaging.common.bytesource.ByteSourceFile;
 import org.apache.commons.imaging.formats.tiff.*;
+import org.apache.commons.imaging.formats.tiff.taginfos.TagInfo;
+import org.apache.commons.imaging.formats.tiff.taginfos.TagInfoAscii;
 
 import javax.imageio.ImageIO;
 
 public class Model{
-   private static final int MAX_FIRE_AGE = 4;
+   private static final int TARGET_WIDTH = 4000;
+   private static final int TARGET_HEIGHT = 8000;
+   private static final int MAX_FIRE_AGE = 5;
    private static Random rand = new Random();
    public static int nrows;
    public static int ncols;
@@ -44,84 +45,59 @@ public class Model{
       }
       activeFires.clear();
    }
-   public static void readTiff(String fname){
+   private static void fillCells(String dem, String cover, String wind){
+      Cell.wind = wind;
+      int[][] coverArr = readTiff(cover);
+      int[][] demArr = readTiff(dem);
+      System.out.println(demArr.length);
+      System.out.println(coverArr.length);
+      for(int y = 0; y < demArr[0].length; y++){
+         if(y%(demArr[0].length/10) == 0){
+            System.out.println(1.0*y/demArr[0].length);
+         }
+         cells.add(new ArrayList<>());
+         for(int x = 0; x < demArr.length; x++){
+            cells.get(y).add(new Cell(x, y, demArr[x][y], coverArr[x][y]));
+         }
+      }
       try {
-         BufferedImage im = Imaging.getBufferedImage(new File(fname));
-         ColorModel cm = im.getColorModel();
-         Raster r = im.getData();
-         DataBuffer db = r.getDataBuffer();
-         int firstV = ((int[]) r.getDataElements(0,0, null))[0];
-         int min = cm.getRed(firstV);
-         int max = cm.getRed(firstV);
-         System.out.println(cm.getRed(min) + ","+cm.getGreen(min)+","+cm.getBlue(min)+","+cm.getAlpha(min));
-         ArrayList<ArrayList<Color>> cl = new ArrayList<>();
-         for(int x = 0; x < r.getWidth(); x++){
-            cl.add(new ArrayList<>());
-            for(int y = 0; y < r.getHeight(); y++) {
-               int v = ((int[]) r.getDataElements(x, y, null))[0];
-               v = cm.getRed(v);
-               if(v > max){
-                  max = v;
-               }
-               if(v < min){
-                  min = v;
-               }
+         Cell.cm = Imaging.getBufferedImage(new File(dem)).getColorModel();
+      }catch(Exception e){
+         System.out.println(e);
+         System.exit(-1);
+      }
+   }
+   public static BufferedImage toBufferedImage(Image img)
+   {
+      if (img instanceof BufferedImage)
+      {
+         return (BufferedImage) img;
+      }
+      BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+      Graphics2D bGr = bimage.createGraphics();
+      bGr.drawImage(img, 0, 0, null);
+      bGr.dispose();
+      return bimage;
+   }
+   public static int[][] readTiff(String fname){
+      try {
+         BufferedImage img = toBufferedImage(Imaging.getBufferedImage(new File(fname)).getScaledInstance(TARGET_WIDTH,TARGET_HEIGHT,0));
+         ColorModel cm = img.getColorModel();
+         int w = img.getWidth();
+         int h = img.getHeight();
+         int[][] pixels = new int[w][h];
+         for( int i = 0; i < w; i++ ) {
+            for (int j = 0; j < h; j++) {
+               pixels[i][j] = (img.getRGB(i, j));
             }
          }
+         return pixels;
       }catch(Exception e){
          System.out.println("we found an error");
          e.printStackTrace();
          System.exit(-1);
       }
-
-   }
-   private static void fillCells(String dem, String cover, String wind){
-      try {
-         File inputDem = new File(dem);
-         Scanner demlineScan = new Scanner(inputDem);
-         File inputCover = new File(cover);
-         Scanner coverlineScan = new Scanner(inputCover);
-         int y = 0;
-         Cell.max = 0;
-         Cell.wind = wind;
-         while(demlineScan.hasNextLine()){
-            cells.add(new ArrayList<Cell>());
-            String demline = demlineScan.nextLine();
-            demline = demline.replace('[',' ');
-            demline = demline.replace(']',' ');
-            String[] strdems = demline.split(",");
-            
-
-            String coverline = coverlineScan.nextLine();
-            coverline = coverline.replace('[',' ');
-            coverline = coverline.replace(']',' ');
-            String[] strcovers = coverline.split(",");
-
-
-            for(int x = 0; x < strdems.length; x++){
-               String thiselevation = strdems[x];
-               String thiscover = strcovers[x];
-               float elevation = Float.parseFloat(thiselevation);
-               int coverType = Integer.parseInt(thiscover.trim());
-               if(elevation > Cell.max){
-                  Cell.max = elevation;
-               }
-
-               Cell c = new Cell(x,y,elevation, coverType);
-               cells.get(y).add(c); 
-            }
-            y++;
-         }
-         if(demlineScan.ioException() != null){
-            demlineScan.ioException().printStackTrace();
-         }
-         coverlineScan.close();
-         demlineScan.close();
-      } catch(FileNotFoundException e){
-         System.out.println("file not found exception");
-         e.printStackTrace();
-         System.exit(1);
-      }
+      return null;
    }
    public static class Cell{
       private int[] loc;
@@ -130,9 +106,10 @@ public class Model{
       private int fuelType;
       private String weather;
       private String moisture;
-      public static String wind;
+      private static String wind;
       private int age;
-      public static float max;
+      private static float max;
+      private static ColorModel cm;
       private void reset(){
          type = "normal";
          age = 0;
@@ -169,8 +146,8 @@ public class Model{
          } else if(type.equalsIgnoreCase("break")){
             g.setColor(Color.YELLOW);
          } else {
-            float cv = elevation/max;
-            g.setColor(new Color(cv, cv, cv));
+            int cv = (int)elevation;
+            g.setColor(new Color(cm.getRed(cv), cm.getBlue(cv), cm.getGreen(cv)));
          }
          g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1+skip,1+skip);
       }
@@ -232,10 +209,10 @@ public class Model{
          return max == this.elevation;
       }
       private float getProb(){
-         float prob = 25;
+         float prob = 10;
          int near = findNear();
          prob+=near*2;
-         prob-=onRidge() ? 15 : 0;
+         prob-=onRidge() ? 50 : 0;
          return prob;
       }
       public Cell update(){

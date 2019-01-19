@@ -131,8 +131,17 @@ public class View extends JFrame {
    };
 
    private class DrawCanvas extends JPanel implements MouseListener, ActionListener{
+      private long lastTime = System.currentTimeMillis();
+      private int fc = 0;
       @Override
-      public void paintComponent(Graphics g){
+      public void paintComponent(Graphics g) {
+         fc++;
+         long now = System.currentTimeMillis();
+         if (now - lastTime >= 1000){
+            lastTime = System.currentTimeMillis();
+            System.out.println(fc);
+            fc = 0;
+         }
          super.paintComponent(g);
          int zoom = zoomFactor;
          for (int y = viewY; y < (this.getHeight() * (zoom)) + viewY; y += (zoom + skipValue)) {

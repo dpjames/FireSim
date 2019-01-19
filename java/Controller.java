@@ -4,14 +4,10 @@ public class Controller{
    private static boolean running = true;
    private static final int INIT_WIDTH = 500;
    private static final int INIT_HEIGHT = 500;
-   private static final String DEM_FILE_NAME = "../data/bigDEM.json";
-   private static final String LAND_COVER_FILE_NAME = "../data/bigLandcover.json";
-   private static final String WIND_DIRECTION = "SE";
+   private static final String DEM_FILE_NAME = "../data/volcs.PNG";
+   private static final String LAND_COVER_FILE_NAME = "../data/volcs.PNG";
+   private static final String WIND_DIRECTION = "NE";
    public static void main(String[] args) throws InterruptedException{
-      Model.readTiff("../data/landcoverFull.tif");
-      if(true){
-         System.exit(0);
-      }
       Model.init(DEM_FILE_NAME, LAND_COVER_FILE_NAME, WIND_DIRECTION);
       View v = new View(INIT_WIDTH, INIT_HEIGHT);
 
