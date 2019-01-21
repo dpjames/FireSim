@@ -165,6 +165,7 @@ public class View extends JFrame {
             Model.cells.get(y).get(x).setType("fire");
             Model.cells.get(y).get(x).setAge(0);
             Model.activeFires.add(Model.cells.get(y).get(x));
+            Model.clearStepCount();
          } catch (IndexOutOfBoundsException obe){
             //System.out.println("oob");
          }

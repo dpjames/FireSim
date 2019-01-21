@@ -1,0 +1,1 @@
+javac *.java && java Controller 1000 500 ../../data/slodem.json ../../data/slolandcover.json  SW

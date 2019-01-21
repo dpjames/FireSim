@@ -5,12 +5,14 @@ import java.io.*;
 import org.apache.commons.imaging.Imaging;
 
 public class Model{
-   private static final int TARGET_WIDTH = 5000;
-   private static final int TARGET_HEIGHT = 5000;
-   private static final int MAX_FIRE_AGE = 20;
-   private static final int SEARCH_BOX_OFFSET = 5;
-   private static final double WIND_MOD = .2;
-   private static final double BASE_PROB = 2.7;
+   private static int stepCount = 0;
+   private static final int TARGET_WIDTH = 1000;
+   private static final int TARGET_HEIGHT = 1000;
+   private static final int MAX_FIRE_AGE = 10;
+   private static final int SEARCH_BOX_OFFSET = 10;
+   private static final double WIND_MOD = 3.5;
+   private static final double BASE_PROB = 4.5;
+   private static final int START_THRESHOLD = 10;
    private static Color FIRE_COLOR = Color.RED;
    private static Color BURNT_COLOR = new Color(139,69,19);
    private static Color BREAK_COLOR = Color.YELLOW;
@@ -20,8 +22,8 @@ public class Model{
    public static ArrayList<ArrayList<Cell>> cells;
    public static ArrayList<Cell> activeFires;
    public static void init(String dem, String cover, String wind){
-      activeFires = new ArrayList<Cell>();
-      cells = new ArrayList<ArrayList<Cell>>();
+      activeFires = new ArrayList<>();
+      cells = new ArrayList<>();
       fillCells(dem, cover, wind);
       nrows = cells.size();
       ncols = nrows > 0 ? cells.get(0).size() : 0;
@@ -37,11 +39,24 @@ public class Model{
          }
       }
       activeFires.clear();
+      stepCount = 0;
+   }
+   public static void clearStepCount(){
+      stepCount = 0;
+   }
+   public static void incrementStepCount(){
+      stepCount++;
    }
    private static void fillCells(String dem, String cover, String wind){
       Cell.wind = wind;
       int[][] coverArr = readTiff(cover);
       int[][] demArr = readTiff(dem);
+      try {
+         Cell.cm = Imaging.getBufferedImage(new File(dem)).getColorModel();
+      }catch(Exception e){
+         System.out.println(e);
+         System.exit(-1);
+      }
       System.out.println(demArr.length);
       System.out.println(coverArr.length);
       for(int y = 0; y < demArr[0].length; y++){
@@ -53,12 +68,7 @@ public class Model{
             cells.get(y).add(new Cell(x, y, demArr[x][y], coverArr[x][y]));
          }
       }
-      try {
-         Cell.cm = Imaging.getBufferedImage(new File(dem)).getColorModel();
-      }catch(Exception e){
-         System.out.println(e);
-         System.exit(-1);
-      }
+
    }
    public static BufferedImage toBufferedImage(Image img)
    {
@@ -96,7 +106,7 @@ public class Model{
    public static class Cell{
       private int[] loc;
       private String type;
-      private float elevation;
+      private int elevation;
       private int fuelType;
       private String weather;
       private String moisture;
@@ -108,10 +118,10 @@ public class Model{
          type = "normal";
          age = 0;
       }
-      public Cell(int x, int y, float elevation, int cover){
+      public Cell(int x, int y, int elevation, int cover){
          this.fuelType = cover;
          this.loc = new int[] {x,y};
-         this.elevation = elevation;
+         this.elevation = cm.getRed(elevation);
          this.type = "normal";
       }
       public String getType(){
@@ -141,7 +151,8 @@ public class Model{
             g.setColor(BREAK_COLOR);
          } else {
             int cv = (int)elevation;
-            g.setColor(new Color(cm.getRed(cv), cm.getBlue(cv), cm.getGreen(cv)));
+            //g.setColor(new Color(cm.getRed(cv), cm.getBlue(cv), cm.getGreen(cv)));
+            g.setColor(new Color(cv,cv,cv));
          }
          g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1+skip,1+skip);
       }
@@ -178,7 +189,7 @@ public class Model{
          }
          return total;
       }
-      private float getElevation(){
+      private int getElevation(){
          return elevation;
       }
       private boolean onRidge() {
@@ -197,24 +208,9 @@ public class Model{
          }
          return max == this.elevation;
       }
-      //private float getProb(){
-      //   int tprob = 0;
-      //   int cx = getX() - offset;
-      //   int cy = getY() - offset;
-      //   for(;cx<=getX()+1;cx++){
-      //      int cy = getY() - 1;
-      //      for(;cy<=getY()+1;cy++){
-      //         tprob+=getCellProb(cells.get(cy).get(cx));
-      //      }
-      //   }
-      //   int near = findNear();
-      //   //float prob = 10;
-      //   //prob+=near*2;
-      //   //prob-=onRidge() ? 50 : 0;
-      //   return prob;
-      //}
-      private double getCellContribution(int x, int y){
+      private double getCellContribution(int x, int y, ArrayList<Integer> elevations){
          Cell c = cells.get(y).get(x);
+         elevations.add(c.getElevation());
          int dx = Math.abs(x - getX());
          int dy = Math.abs(y - getY());
          double distance = Math.sqrt(dx * dx + dy * dy);
@@ -223,18 +219,42 @@ public class Model{
          }
          double prob = BASE_PROB;
          prob += inWindDirection(x,y) ? WIND_MOD : -1 * WIND_MOD;
+
          return prob/distance;
       }
-      private float getProb(){
-         int total = 0;
+      private double getProb(){
+         double total = 0;
          int y = getY();
          int x = getX();
+         ArrayList<Integer> elevations = new ArrayList<Integer>();
          for(int cx = x - SEARCH_BOX_OFFSET;cx < x + SEARCH_BOX_OFFSET; cx++){
             for(int cy = y - SEARCH_BOX_OFFSET; cy < y + SEARCH_BOX_OFFSET; cy++){
-               total+=getCellContribution(cx,cy);
+               total+=getCellContribution(cx,cy,elevations);
             }
          }
+         total = getElevationImpact(elevations, total);
          return total;
+      }
+      private double getElevationImpact(ArrayList<Integer> elevations, double total){
+         int ltcount = 0;
+         int gtcount = 0;
+         for(int e : elevations){
+            ltcount+= this.elevation < e ? 1 : 0;
+            gtcount+= this.elevation > e ? 1 : 0;
+         }
+         double gtpercent = (double) gtcount / elevations.size() * 100;
+         double ltpercent = (double) ltcount / elevations.size() * 100;
+         double diff = Math.abs(gtpercent - ltpercent);
+         if(diff < 10){
+            return total;
+         } else if(diff < 30) {
+            return total / 2;
+         } else if(diff < 60){
+            return total/4;
+         } else if (diff < 90){
+            return total/6;
+         }
+         return 0;
       }
       public Cell update(){
          if(type.equalsIgnoreCase("fire")){
@@ -248,9 +268,9 @@ public class Model{
          } else if(fuelType == -1){
             return null;
          }
-         float prob = getProb();
-         if(rand.nextInt(100) + 1 < prob){
-            Cell c = new Cell(this); 
+         double prob = getProb();
+         if(rand.nextInt(100) + 1 < prob || stepCount < START_THRESHOLD){
+            Cell c = new Cell(this);
             c.setType("fire");
             c.setAge(0);
             return c;
