@@ -6,8 +6,8 @@ import org.apache.commons.imaging.Imaging;
 
 public class Model{
    private static int stepCount = 0;
-   private static final int TARGET_WIDTH = 1000;
-   private static final int TARGET_HEIGHT = 1000;
+   private static final int TARGET_WIDTH = 2000;
+   private static final int TARGET_HEIGHT = 2000;
    private static final int MAX_FIRE_AGE = 10;
    private static final int SEARCH_BOX_OFFSET = 10;
    private static final double WIND_MOD = 3.5;

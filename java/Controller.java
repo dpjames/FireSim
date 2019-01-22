@@ -4,9 +4,9 @@ public class Controller{
    private static boolean running = true;
    private static final int INIT_WIDTH = 500;
    private static final int INIT_HEIGHT = 500;
-   private static final String DEM_FILE_NAME = "data/dem.jpg";
-   private static final String LAND_COVER_FILE_NAME = "data/lc.jpg";
-   private static final String WIND_DIRECTION = "NW";
+   private static final String DEM_FILE_NAME = "../data/paradise/dem.jpg";
+   private static final String LAND_COVER_FILE_NAME = "../data/paradise/lc.jpg";
+   private static final String WIND_DIRECTION = "SW";
    public static void main(String[] args) throws InterruptedException{
       Model.init(DEM_FILE_NAME, LAND_COVER_FILE_NAME, WIND_DIRECTION);
       View v = new View(INIT_WIDTH, INIT_HEIGHT);
