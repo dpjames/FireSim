@@ -4,6 +4,8 @@ import java.awt.*;
 import java.io.*;
 import org.apache.commons.imaging.Imaging;
 
+import javax.imageio.ImageIO;
+
 public class Model{
    private static int stepCount = 0;
    private static final int TARGET_WIDTH = 2000;
@@ -81,6 +83,36 @@ public class Model{
       bGr.drawImage(img, 0, 0, null);
       bGr.dispose();
       return bimage;
+   }
+   public static void export(String dest, double[][] bbox){
+      BufferedImage img = new BufferedImage(TARGET_WIDTH, TARGET_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+      Graphics pen = img.getGraphics();
+      for(int y = 0; y < cells.size(); y++){
+         for(int x = 0; x < cells.get(0).size(); x++){
+            Cell c = cells.get(y).get(x);
+            if(c.getType().equalsIgnoreCase("burnt")){
+               pen.setColor(Color.BLACK);
+            } else {
+               pen.setColor(Color.WHITE);
+            }
+            pen.fillRect(x,y,1,1);
+         }
+      }
+      double lats = (Math.abs(bbox[0][0] - bbox[1][0]))/cells.size();
+      double longs = (Math.abs(bbox[0][1] - bbox[1][1]))/cells.get(0).size();
+      try {
+         ImageIO.write(img, "png", new File(dest + ".png"));
+         FileWriter fw = new FileWriter(new File(dest+".wld"));
+         fw.write(longs +"\n");
+         fw.write("0\n0\n");
+         fw.write("-"+lats +"\n");
+         fw.write(bbox[0][0]+"\n");
+         fw.write(bbox[1][1]+"\n");
+         fw.close();
+      } catch(Exception e){
+         e.printStackTrace();
+         System.out.println("cannot write the file sorry :( ");
+      }
    }
    public static int[][] readTiff(String fname){
       try {

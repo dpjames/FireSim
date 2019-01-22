@@ -2,6 +2,7 @@ import java.awt.*;
 import javax.swing.*;
 import java.awt.event.*;
 public class View extends JFrame {
+   private static Color TEXT_COLOR = Color.BLUE;
    private Timer drawTime;
    private DrawCanvas canvas = new DrawCanvas();
    private int viewY;
@@ -135,13 +136,7 @@ public class View extends JFrame {
       private int fc = 0;
       @Override
       public void paintComponent(Graphics g) {
-         fc++;
-         long now = System.currentTimeMillis();
-         if (now - lastTime >= 1000){
-            lastTime = System.currentTimeMillis();
-            System.out.println(fc);
-            fc = 0;
-         }
+
          super.paintComponent(g);
          int zoom = zoomFactor;
          for (int y = viewY; y < (this.getHeight() * (zoom)) + viewY; y += (zoom + skipValue)) {
@@ -153,6 +148,11 @@ public class View extends JFrame {
                }
             }
          }
+
+         long now = System.currentTimeMillis();
+         g.setColor(TEXT_COLOR);
+         g.drawString(1000 / (now-lastTime) + "",20,20);
+         lastTime = now;
       }
       @Override
       public void actionPerformed(ActionEvent e){

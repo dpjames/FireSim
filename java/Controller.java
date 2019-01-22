@@ -7,6 +7,8 @@ public class Controller{
    private static final String DEM_FILE_NAME = "../data/paradise/dem.jpg";
    private static final String LAND_COVER_FILE_NAME = "../data/paradise/lc.jpg";
    private static final String WIND_DIRECTION = "SW";
+   private static final double[][] BBOX = {{-122.0005555550000054,38.9994444450000017},{-120.9994444449999946,40.0005555549999983}};
+   private static final String OUTPUT = "out";
    public static void main(String[] args) throws InterruptedException{
       Model.init(DEM_FILE_NAME, LAND_COVER_FILE_NAME, WIND_DIRECTION);
       View v = new View(INIT_WIDTH, INIT_HEIGHT);
@@ -29,6 +31,11 @@ public class Controller{
       running = !running;
    }
    public static void update() throws NullPointerException{
+      if(Model.activeFires.size() == 0){
+         running = false;
+         System.out.println("exporting!");
+         Model.export(OUTPUT, BBOX);
+      }
       ArrayList<Model.Cell> newCells = new ArrayList<Model.Cell>();
       Model.incrementStepCount();
       for(int i = 0; i < Model.activeFires.size(); i++){
@@ -42,7 +49,6 @@ public class Controller{
                   if(tempCell != null && !newCells.contains(tempCell)){
                      newCells.add(tempCell);
                   }
-
                } catch (ArrayIndexOutOfBoundsException e){
                   continue;
                } catch(IndexOutOfBoundsException e){
