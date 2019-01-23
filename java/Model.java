@@ -8,8 +8,8 @@ import javax.imageio.ImageIO;
 
 public class Model{
    private static int stepCount = 0;
-   private static final int TARGET_WIDTH = 2000;
-   private static final int TARGET_HEIGHT = 2000;
+   public static final int TARGET_WIDTH = 2000;
+   public static final int TARGET_HEIGHT = 2000;
    private static int MAX_FIRE_AGE = 10;
    private static int SEARCH_BOX_OFFSET = 10;
    private static double WIND_MOD = 6;
