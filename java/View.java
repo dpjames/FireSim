@@ -164,10 +164,9 @@ public class View extends JFrame {
          try{
             int x = (e.getX() * zoomFactor) + viewX;
             int y = (e.getY() * zoomFactor) + viewY;
-            Model.cells.get(y).get(x).setType("fire");
-            Model.cells.get(y).get(x).setAge(0);
-            Model.activeFires.add(Model.cells.get(y).get(x));
-            Model.clearStepCount();
+            System.out.println("starting fire at " + x + ", " + y);
+            Model.startFire(x,y);
+
          } catch (IndexOutOfBoundsException obe){
             //System.out.println("oob");
          }

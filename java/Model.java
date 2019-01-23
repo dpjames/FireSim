@@ -10,11 +10,11 @@ public class Model{
    private static int stepCount = 0;
    private static final int TARGET_WIDTH = 2000;
    private static final int TARGET_HEIGHT = 2000;
-   private static final int MAX_FIRE_AGE = 10;
-   private static final int SEARCH_BOX_OFFSET = 10;
-   private static final double WIND_MOD = 3.5;
-   private static final double BASE_PROB = 4.5;
-   private static final int START_THRESHOLD = 30;
+   private static int MAX_FIRE_AGE = 10;
+   private static int SEARCH_BOX_OFFSET = 10;
+   private static double WIND_MOD = 6;
+   private static double BASE_PROB = 1.5;
+   private static int START_THRESHOLD = 30;
    private static Color FIRE_COLOR = Color.RED;
    private static Color BURNT_COLOR = new Color(139,69,19);
    private static Color BREAK_COLOR = Color.YELLOW;
@@ -30,6 +30,13 @@ public class Model{
       nrows = cells.size();
       ncols = nrows > 0 ? cells.get(0).size() : 0;
    }
+   public static void setVariables(int maxfireage, int searchboxoffset, double windmod, double baseprob, int startthreshold){
+      MAX_FIRE_AGE = maxfireage;
+      SEARCH_BOX_OFFSET = searchboxoffset;
+      WIND_MOD = windmod;
+      BASE_PROB = baseprob;
+      START_THRESHOLD = startthreshold;
+   }
    public static void reset(){
       for(int y = 0; y < cells.size(); y++){
          for(int x = 0; x < cells.get(0).size(); x++){
@@ -42,6 +49,12 @@ public class Model{
       }
       activeFires.clear();
       stepCount = 0;
+   }
+   public static void startFire(int x, int y){
+      Model.cells.get(y).get(x).setType("fire");
+      Model.cells.get(y).get(x).setAge(0);
+      Model.activeFires.add(Model.cells.get(y).get(x));
+      Model.clearStepCount();
    }
    public static void clearStepCount(){
       stepCount = 0;
@@ -250,7 +263,7 @@ public class Model{
             return 0;
          }
          double prob = BASE_PROB;
-         prob += inWindDirection(x,y) ? WIND_MOD : -.75 * WIND_MOD;
+         prob += inWindDirection(x,y) ? WIND_MOD : 0 ;
          return prob/distance;
       }
       private double getProb(){
