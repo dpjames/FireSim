@@ -151,7 +151,9 @@ public class View extends JFrame {
 
          long now = System.currentTimeMillis();
          g.setColor(TEXT_COLOR);
-         g.drawString(1000 / (now-lastTime) + "",20,20);
+         long delta = now - lastTime;
+         delta = delta <= 0 ? 1 : delta;
+         g.drawString(1000 / delta + "",20,20);
          lastTime = now;
       }
       @Override

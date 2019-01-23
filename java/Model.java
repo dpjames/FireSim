@@ -14,7 +14,7 @@ public class Model{
    private static final int SEARCH_BOX_OFFSET = 10;
    private static final double WIND_MOD = 3.5;
    private static final double BASE_PROB = 4.5;
-   private static final int START_THRESHOLD = 10;
+   private static final int START_THRESHOLD = 30;
    private static Color FIRE_COLOR = Color.RED;
    private static Color BURNT_COLOR = new Color(139,69,19);
    private static Color BREAK_COLOR = Color.YELLOW;
@@ -250,8 +250,7 @@ public class Model{
             return 0;
          }
          double prob = BASE_PROB;
-         prob += inWindDirection(x,y) ? WIND_MOD : -1 * WIND_MOD;
-
+         prob += inWindDirection(x,y) ? WIND_MOD : -.75 * WIND_MOD;
          return prob/distance;
       }
       private double getProb(){
@@ -265,6 +264,9 @@ public class Model{
             }
          }
          total = getElevationImpact(elevations, total);
+         if(fuelType == -1){
+            return total/4;
+         }
          return total;
       }
       private double getElevationImpact(ArrayList<Integer> elevations, double total){
@@ -297,9 +299,10 @@ public class Model{
             return null;
          } else if(type.equalsIgnoreCase("break") || type.equalsIgnoreCase("burnt")){
             return null;
-         } else if(fuelType == -1){
-            return null;
          }
+         //else if(fuelType == -1){
+         //   return null;
+         //}
          double prob = getProb();
          if(rand.nextInt(100) + 1 < prob || stepCount < START_THRESHOLD){
             Cell c = new Cell(this);
