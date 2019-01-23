@@ -21,8 +21,9 @@ public class MLController {
    //private static final int[] START = {230, 60};
    private static final String OUTPUT_BASE = "LEARN/learning";
    private static String OUTPUT = "";
-   private static final int N_CHILDREN = 40;
-   private static final int N_GEN = 200;
+   private static final int N_CHILDREN = 25;
+   private static final double DROP_PERCENT = .9;
+   private static final int N_GEN = 50;
    private static BufferedImage SOL_IMG;
    public static void main(String[] args) throws InterruptedException{
       try {
@@ -51,10 +52,19 @@ public class MLController {
             timer = System.nanoTime();
             while (running) { //going to change this to a key listener TODO
                update();
-               if(System.nanoTime() - timer > 15000000000L){
-                  System.out.println("killed early");
-                  Model.export(OUTPUT, BBOX);
+               if(System.nanoTime() - timer > 10000000000L){
+                  //System.out.println("killed early");
+                  //System.out.println("decrementing base, and running this one again");
+                  //child.BASE_PROB-=.1;
+                  //Model.setVariables(child.MAX_FIRE_AGE, child.SEARCH_BOX_OFFSET, child.WIND_MOD, child.BASE_PROB, child.START_THRESHOLD);
+                  //Model.reset();
+                  //Model.startFire(START[0], START[1]);
+                  //timer = System.nanoTime();
+                  //running = true;
                   running = false;
+                  System.out.println("killing blob");
+                  child.LIKE_CELLS = -1;
+                  Model.export(OUTPUT, BBOX);
                }
             }
             count++;
@@ -62,7 +72,7 @@ public class MLController {
          System.out.println("done with gen " + i);
          findBest(children, i);
          children.sort((ModelVars o1, ModelVars o2) -> o1.LIKE_CELLS < o2.LIKE_CELLS ? -1 : 1);
-         int cutoff = (int)(children.size() * .8);
+         int cutoff = (int)((children.size() - 1) * DROP_PERCENT);
          for(int j = 0; j < cutoff; j++){
             children.get(j).mutate(children.get(children.size() - 1));
          }
@@ -91,12 +101,17 @@ public class MLController {
    public static ModelVars findBest(ArrayList<ModelVars> children, int gen){
       ModelVars best = children.get(0);
       int max = 0;
+      int likePixels = -1;
       for(int i = 0; i < children.size(); i++){
          try {
-            String thisName = OUTPUT_BASE + "gen" + gen + "child" + i + ".png";
-            BufferedImage thisImage = Model.toBufferedImage(Imaging.getBufferedImage(new File(thisName)).getScaledInstance(Model.TARGET_WIDTH,Model.TARGET_HEIGHT,0));
-            int likePixels = findLike(thisImage, SOL_IMG);
-            children.get(i).LIKE_CELLS = likePixels;
+            if(children.get(i).LIKE_CELLS != -1){
+               String thisName = OUTPUT_BASE + "gen" + gen + "child" + i + children.get(i).toString() + ".png";
+               BufferedImage thisImage = Model.toBufferedImage(Imaging.getBufferedImage(new File(thisName)).getScaledInstance(Model.TARGET_WIDTH,Model.TARGET_HEIGHT,0));
+               likePixels = findLike(thisImage, SOL_IMG);
+               children.get(i).LIKE_CELLS = likePixels;
+            } else {
+               likePixels = -1;
+            }
             if(likePixels > max){
                best = children.get(i);
                max = likePixels;
@@ -162,24 +177,27 @@ public class MLController {
       private double BASE_PROB = 1.5;
       private int START_THRESHOLD = 15;
       private ModelVars(){
-         int p = rand.nextInt(100);
-         if(p < 50){
-            MAX_FIRE_AGE += rand.nextInt(6) - 3;
-            SEARCH_BOX_OFFSET += rand.nextInt(6) - 3;
-            WIND_MOD += rand.nextInt(6) - 3;
-            BASE_PROB += rand.nextDouble() * 10;
-            START_THRESHOLD += rand.nextInt(20) - 20;
-         }
+         mutate(this);
       }
       private void mutate(ModelVars m){
-         int p = rand.nextInt(100);
-         if(p < 50){
-            MAX_FIRE_AGE      = Math.min(m.MAX_FIRE_AGE + rand.nextInt(6) - 3,30);
-            SEARCH_BOX_OFFSET = Math.min(m.SEARCH_BOX_OFFSET + rand.nextInt(6) - 3,25);
-            WIND_MOD          = Math.min(m.WIND_MOD + rand.nextInt(6) - 3,15);
-            BASE_PROB         = Math.min(m.BASE_PROB + rand.nextDouble() * 10 - .5,6);
-            START_THRESHOLD   = Math.max(Math.min(m.START_THRESHOLD + rand.nextInt(20) - 20,30), 0);
-         }
+         do{
+            int mv = rand.nextInt(5);
+            switch(mv){
+               case 0:
+                  MAX_FIRE_AGE = Math.min(m.MAX_FIRE_AGE + rand.nextInt(5) - 2, 25);
+                  return;
+               case 1:
+                  SEARCH_BOX_OFFSET = Math.min(m.SEARCH_BOX_OFFSET + rand.nextInt(3) - 1, 15);
+               case 2:
+                  WIND_MOD = m.WIND_MOD + rand.nextDouble()/2;
+                  return;
+               case 3:
+                  BASE_PROB = m.BASE_PROB + rand.nextDouble()/4;
+                  return;
+               case 4:
+                  START_THRESHOLD = Math.max(m.START_THRESHOLD + rand.nextInt(3) - 1, 0);
+            }
+         } while(rand.nextBoolean());
       }
       public String toString(){
          return "N"+MAX_FIRE_AGE+"N"+SEARCH_BOX_OFFSET+"N"+WIND_MOD+"N"+BASE_PROB+"N"+START_THRESHOLD;
