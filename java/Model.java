@@ -11,10 +11,15 @@ public class Model{
    public static final int TARGET_WIDTH = 2000;
    public static final int TARGET_HEIGHT = 2000;
    private static int MAX_FIRE_AGE = 10;
-   private static int SEARCH_BOX_OFFSET = 10;
-   private static double WIND_MOD = 6;
-   private static double BASE_PROB = 1.5;
-   private static int START_THRESHOLD = 30;
+   private static int SEARCH_BOX_OFFSET = 9;
+   private static double WIND_MOD = 6.495;
+   private static double BASE_PROB = 1.687;
+   private static int START_THRESHOLD = 16;
+   // 10
+   // 9
+   // 6.495006244271843
+   // 1.6870920562203096
+   // 16
    private static Color FIRE_COLOR = Color.RED;
    private static Color BURNT_COLOR = new Color(139,69,19);
    private static Color BREAK_COLOR = Color.YELLOW;
