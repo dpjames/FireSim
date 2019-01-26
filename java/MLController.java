@@ -21,6 +21,7 @@ public class MLController {
    //private static final int[] START = {230, 60};
    private static final String OUTPUT_BASE = "LEARN/learning";
    private static String OUTPUT = "";
+   private static long TTK = 15000000000L;
    private static final int N_CHILDREN = 25;
    private static final double DROP_PERCENT = .9;
    private static final int N_GEN = 50;
@@ -52,7 +53,7 @@ public class MLController {
             timer = System.nanoTime();
             while (running) { //going to change this to a key listener TODO
                update();
-               if(System.nanoTime() - timer > 10000000000L){
+               if(System.nanoTime() - timer > TTK){
                   //System.out.println("killed early");
                   //System.out.println("decrementing base, and running this one again");
                   //child.BASE_PROB-=.1;
