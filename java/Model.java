@@ -2,6 +2,8 @@ import java.awt.image.*;
 import java.util.*;
 import java.awt.*;
 import java.io.*;
+
+import jdk.nashorn.internal.runtime.ECMAException;
 import org.apache.commons.imaging.Imaging;
 
 import javax.imageio.ImageIO;
@@ -11,10 +13,13 @@ public class Model{
    public static final int TARGET_WIDTH = 2000;
    public static final int TARGET_HEIGHT = 2000;
    private static int MAX_FIRE_AGE = 10;
-   private static int SEARCH_BOX_OFFSET = 9;
+   private static int SEARCH_BOX_OFFSET = 7;
    private static double WIND_MOD = 6.495;
-   private static double BASE_PROB = 1.687;
-   private static int START_THRESHOLD = 16;
+   private static double BASE_PROB = 1.6870;
+   private static int START_THRESHOLD = 32;
+   private static double JUMP_PROB = 3;
+   private static double RIDGE_PROB = .75;
+   private static int RIDGE_OFFSET = 30;
    // 10
    // 9
    // 6.495006244271843
@@ -88,7 +93,16 @@ public class Model{
             cells.get(y).add(new Cell(x, y, demArr[x][y], coverArr[x][y]));
          }
       }
-
+      int cur = 0;
+      for(ArrayList<Cell> l : cells){
+         if(cur * 1.0 % (l.size() / 10) == 0) {
+            System.out.println(cur * 1.0 / l.size());
+         }
+         for(Cell c : l){
+            //c.calcRidgeColor();
+         }
+         cur++;
+      }
    }
    public static BufferedImage toBufferedImage(Image img)
    {
@@ -160,6 +174,7 @@ public class Model{
       private int fuelType;
       private String weather;
       private String moisture;
+      private Color ridgeVal = null;
       private static String wind;
       private int age;
       private static float max;
@@ -186,13 +201,48 @@ public class Model{
          this.weather = o.weather;
          this.moisture = o.moisture;
       }
+      public Color calcRidgeColor(){
+         if(ridgeVal != null){
+            return ridgeVal;
+         }
+         int myElevation = elevation;
+         int gt = 0;
+         int lt = 0;
+         int eq = 0;
+         int total = 0;
+         int x = getX();
+         int y = getY();
+         for(int cx = x - RIDGE_OFFSET;cx < x + RIDGE_OFFSET; cx++){
+            for(int cy = y - RIDGE_OFFSET; cy < y + RIDGE_OFFSET; cy++){
+               try {
+                  int theirElevation = cells.get(cy).get(cx).elevation;
+                  gt += myElevation > theirElevation ? 1 : 0;
+                  lt += myElevation < theirElevation ? 1 : 0;
+                  eq += myElevation == theirElevation ? 1 : 0;
+                  total++;
+               }catch(Exception e){
+                  continue;
+               }
+
+            }
+         }
+         //System.out.println(gt + "," + lt + "," + eq + "::" + total);
+         if(gt >= RIDGE_PROB * total) {
+            ridgeVal = View.RIDGE_COLOR;
+         } else if(lt >= RIDGE_PROB * total){
+            ridgeVal = View.VALLEY_COLOR;
+         } else {
+            ridgeVal = new Color(elevation,elevation,elevation);
+         }
+         return ridgeVal;
+      }
       public int getX(){
          return loc[0];
       }
       public int getY(){
          return loc[1];
       }
-      public void draw(Graphics g, int xoffset, int yoffset, int zoom, int skip){
+      public void draw(Graphics g, int xoffset, int yoffset, int zoom, int skip, int curView){
          if(this.type.equalsIgnoreCase("fire")){
             g.setColor(FIRE_COLOR);
          } else if(type.equalsIgnoreCase("burnt")){
@@ -200,9 +250,17 @@ public class Model{
          } else if(type.equalsIgnoreCase("break")){
             g.setColor(BREAK_COLOR);
          } else {
-            int cv = (int)elevation;
+            Color c;
+            if(curView == 1){
+               int cv = cm.getRed(fuelType);
+               c = new Color(cv,cv,cv);
+            } else if(curView == 2){
+               c = calcRidgeColor();
+            } else {
+               c = new Color(elevation,elevation,elevation);
+            }
             //g.setColor(new Color(cm.getRed(cv), cm.getBlue(cv), cm.getGreen(cv)));
-            g.setColor(new Color(cv,cv,cv));
+            g.setColor(c);
          }
          g.fillRect((loc[0] - xoffset) / zoom, (loc[1] - yoffset) / zoom,1+skip,1+skip);
       }
@@ -259,6 +317,7 @@ public class Model{
          return max == this.elevation;
       }
       private double getCellContribution(int x, int y, ArrayList<Integer> elevations){
+
          Cell c = cells.get(y).get(x);
          elevations.add(c.getElevation());
          int dx = Math.abs(x - getX());
@@ -278,13 +337,13 @@ public class Model{
          ArrayList<Integer> elevations = new ArrayList<Integer>();
          for(int cx = x - SEARCH_BOX_OFFSET;cx < x + SEARCH_BOX_OFFSET; cx++){
             for(int cy = y - SEARCH_BOX_OFFSET; cy < y + SEARCH_BOX_OFFSET; cy++){
+               //if(cells.get(cy).get(cx).fuelType == -1){
+               //   return JUMP_PROB;
+               //}
                total+=getCellContribution(cx,cy,elevations);
             }
          }
          total = getElevationImpact(elevations, total);
-         if(fuelType == -1){
-            return total/4;
-         }
          return total;
       }
       private double getElevationImpact(ArrayList<Integer> elevations, double total){
@@ -321,7 +380,10 @@ public class Model{
          //else if(fuelType == -1){
          //   return null;
          //}
-         double prob = getProb();
+         double prob = JUMP_PROB;
+         if(fuelType != -1){
+            prob = getProb();
+         }
          if(rand.nextInt(100) + 1 < prob || stepCount < START_THRESHOLD){
             Cell c = new Cell(this);
             c.setType("fire");

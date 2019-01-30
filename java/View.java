@@ -2,13 +2,17 @@ import java.awt.*;
 import javax.swing.*;
 import java.awt.event.*;
 public class View extends JFrame {
+   public static Color VALLEY_COLOR = Color.GREEN;
+   public static Color RIDGE_COLOR = Color.BLUE;
+   public static Color EQ_COLOR = Color.ORANGE;
    private static Color TEXT_COLOR = Color.BLUE;
+   private int curView = 0;
    private Timer drawTime;
    private DrawCanvas canvas = new DrawCanvas();
    private int viewY;
    private int viewX;
    private int zoomFactor = 1;
-   private int skipValue = 5;
+   private int skipValue = 1;
    public View(int w,int h){
       super();
       viewY = 0;
@@ -47,6 +51,8 @@ public class View extends JFrame {
       canvas.getActionMap().put(SKIP_MORE,skip_more);
       canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_N,0), SKIP_LESS);
       canvas.getActionMap().put(SKIP_LESS,skip_less);
+      canvas.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_C,0), CHANGE_VIEW);
+      canvas.getActionMap().put(CHANGE_VIEW,change_view);
    }
    private static final String TOGGLE_RUN = "TOGGLE_RUN";
    private static final String LEFT = "LEFT";
@@ -58,6 +64,17 @@ public class View extends JFrame {
    private static final String RESET = "RESET";
    private static final String SKIP_MORE = "SKIP_MORE";
    private static final String SKIP_LESS = "SKIP_LESS";
+   private static final String CHANGE_VIEW = "CHANGE_VIEW";
+   private Action change_view = new AbstractAction(CHANGE_VIEW) {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+         if(curView == 0 || curView == 1){
+            curView++;
+         } else {
+            curView = 0;
+         }
+      }
+   };
    private Action skip_more = new AbstractAction(SKIP_MORE){
       @Override
       public void actionPerformed(ActionEvent e){
@@ -142,7 +159,7 @@ public class View extends JFrame {
          for (int y = viewY; y < (this.getHeight() * (zoom)) + viewY; y += (zoom + skipValue)) {
             for (int x = viewX; x < (this.getWidth() * (zoom)) + viewX; x += (zoom + skipValue)) {
                try {
-                  Model.cells.get(y).get(x).draw(g, viewX, viewY, zoom, skipValue);
+                  Model.cells.get(y).get(x).draw(g, viewX, viewY, zoom, skipValue, curView);
                } catch (Exception e) {
                   continue;
                }

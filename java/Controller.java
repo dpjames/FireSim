@@ -1,11 +1,11 @@
 import java.util.ArrayList;
-public class Controller{
+   public class Controller{
    private static boolean reset = false;
    private static boolean running = true;
-   private static final int INIT_WIDTH = 500;
-   private static final int INIT_HEIGHT = 500;
-   private static final String DEM_FILE_NAME = "data/PARADISE/dem.jpg";
-   private static final String LAND_COVER_FILE_NAME = "data/PARADISE/lc.jpg";
+   private static final int INIT_WIDTH = 1000;
+   private static final int INIT_HEIGHT = 1000;
+   private static final String DEM_FILE_NAME = "data/YOSEMITE/dem.jpg";
+   private static final String LAND_COVER_FILE_NAME = "data/YOSEMITE/lc.jpg";
    private static final String WIND_DIRECTION = "SW";
    private static final double[][] BBOX = {{-122.0005555550000054,38.9994444450000017},{-120.9994444449999946,40.0005555549999983}};
    private static final String OUTPUT = "out";
